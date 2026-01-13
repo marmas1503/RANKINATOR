@@ -1,0 +1,46 @@
+{
+  "excel_file": "resources/dataset/dataset.xlsx",
+  "font_path": "comic.ttf",
+  "download_config": {
+    "url_col": "G",
+    "rank_col": "A",
+    "clip_duration": 30,
+    "before_highlight": 2,
+    "chorus_percentage": 0.25,
+    "output_dir": "output/clips",
+    "temp_dir": "output/temp",
+    "failed_log": "output/failed_urls.csv"
+  },
+  "card_config": {
+    "base_image": "resources/template/template.png",
+    "output_folder": "output/cards",
+    "category_col": "C",
+    "icon_coord": [1115, 830],
+    "icons_directory": "resources/icons/",
+    "hidden_categories": ["Drama", "Mystery"],
+    "fields": {
+      "Rank Number": {"col": "A", "coord": [140, 843], "size": 66, "color": [255, 255, 255]},
+      "Average":     {"col": "I", "coord": [196, 961], "size": 32, "color": [255, 255, 255]}, 
+      "Title":       {"col": "D", "coord": [432, 827], "size": 40, "color": [255, 255, 255]},
+      "Author":      {"col": "E", "coord": [424, 881], "size": 30, "color": [255, 255, 255]}, 
+      "Origin":      {"col": "F", "coord": [424, 925], "size": 30, "color": [255, 255, 255]},
+      "Notes":       {"col": "B", "coord": [308, 967], "size": 30, "color": [255, 251, 0]}
+    },
+    "voters": {
+      "font_size": 40,
+      "border_width": 3,
+      "border_color": [0, 0, 0],
+      "colors": {
+        "base": [255, 255, 255],
+        "max": [0, 180, 0],
+        "min": [255, 50, 50]
+      },
+      "y_offset": 103,
+      "group1_start": [1435, 80],
+      "group2_start": [1727, 80]
+    }
+  },
+  "voters_map_group1": {},
+  "voters_map_group2": {},
+  "icons_map": {}
+}
