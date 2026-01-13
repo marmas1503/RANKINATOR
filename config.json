@@ -42,5 +42,12 @@
   },
   "voters_map_group1": {},
   "voters_map_group2": {},
-  "icons_map": {}
+  "icons_map": {},
+"video_editor_config": {
+    "output_final_dir": "output/final_videos",
+    "fps": 30,
+    "video_position": [41, 105],
+    "video_size": [1219, 688],
+    "video_zoom": 1.0
+  }
 }
