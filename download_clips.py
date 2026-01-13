@@ -11,11 +11,13 @@ CLIP_DURATION = 30
 BEFORE_HIGHLIGHT = 2
 DEFAULT_START_CLIP = 30
 
+# Nuova impostazione per la percentuale statistica del ritornello (0.25 = 25%)
+CHORUS_STATISTICAL_PERCENTAGE = 0.25 
+
 # Cartelle di Output
 BASE_OUTPUT_DIR = 'output'
 OUTPUT_CLIPS_DIR = os.path.join(BASE_OUTPUT_DIR, 'clips')
 TEMP_DIR = os.path.join(BASE_OUTPUT_DIR, 'temp')
-# Il CSV ora viene salvato dentro 'output'
 FAILED_LOG_FILE = os.path.join(BASE_OUTPUT_DIR, 'failed_urls.csv')
 
 # Creazione struttura cartelle
@@ -46,14 +48,22 @@ def process_video(url, rank):
             ydl.params['remote_components'] = ['ejs:github'] 
             info = ydl.extract_info(url, download=False)
             heatmap = info.get('heatmap')
+            duration_total = info.get('duration')
             
         start_timestamp = 0
-        duration = CLIP_DURATION
+        
+        # LOGICA DI ESTRAZIONE MOMENTO SALIENTE
         if heatmap:
             peak_moment = max(heatmap, key=lambda x: x['value'])
             start_timestamp = max(0, peak_moment['start_time'] - BEFORE_HIGHLIGHT)
+            print(f"-> Rank {rank}: Usata Heatmap. Inizio a {int(start_timestamp)}s")
+        elif duration_total:
+            # APPROCCIO STATISTICO: Usa la percentuale regolabile
+            start_timestamp = duration_total * CHORUS_STATISTICAL_PERCENTAGE
+            print(f"-> Rank {rank}: No Heatmap. Calcolato {int(CHORUS_STATISTICAL_PERCENTAGE*100)}% durata ({int(start_timestamp)}s)")
         else:
-            duration = DEFAULT_START_CLIP
+            start_timestamp = DEFAULT_START_CLIP
+            print(f"-> Rank {rank}: Nessun dato disponibile. Uso default {start_timestamp}s")
 
         # 2. DOWNLOAD FORMATO IBRIDO
         ydl_opts_dl = {
@@ -72,7 +82,7 @@ def process_video(url, rank):
         # 3. TAGLIO E RE-ENCODING
         (
             ffmpeg
-            .input(temp_filename, ss=start_timestamp, t=duration)
+            .input(temp_filename, ss=start_timestamp, t=CLIP_DURATION)
             .output(output_path, 
                     vcodec='libx264', 
                     acodec='aac', 
@@ -113,18 +123,15 @@ def main():
         if not process_video(url, rank):
             failed_videos.append({'Position': rank, 'URL': url})
 
-    # Salvataggio CSV nella cartella di output
     if failed_videos:
         pd.DataFrame(failed_videos).to_csv(FAILED_LOG_FILE, index=False, encoding='utf-8-sig')
         print(f"\n--- LOG ERRORI GENERATO ---")
         print(f"File salvato in: {FAILED_LOG_FILE}")
     else:
-        # Se esiste un vecchio log di una sessione precedente, lo rimuoviamo per pulizia
         if os.path.exists(FAILED_LOG_FILE):
             os.remove(FAILED_LOG_FILE)
         print("\n--- COMPLETATO: Nessun errore riscontrato! ---")
     
-    # Pulizia cartella temp se vuota
     try:
         if os.path.exists(TEMP_DIR) and not os.listdir(TEMP_DIR):
             os.rmdir(TEMP_DIR)
