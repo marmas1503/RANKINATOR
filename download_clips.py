@@ -62,46 +62,53 @@ def process_video(url, rank):
     xfade = d_cfg.get('crossfade_duration', 1.0)
 
     try:
-        # 1. Estrazione URL separati per analisi e download
+        # 1. Estrazione Info
         with yt_dlp.YoutubeDL({'quiet': True, 'format': 'bestaudio/best'}) as ydl:
             audio_info = ydl.extract_info(url, download=False)
             audio_url = audio_info['url']
 
-        with yt_dlp.YoutubeDL({'quiet': True, 'format': 'bestvideo[ext=mp4]+bestaudio[ext=m4a]/best'}) as ydl:
+        with yt_dlp.YoutubeDL({'quiet': True, 'format': 'bestvideo[ext=mp4][height<=1080]+bestaudio[ext=m4a]/best'}) as ydl:
             info = ydl.extract_info(url, download=False)
             heatmap = info.get('heatmap')
             duration_total = info.get('duration', 0)
             video_url = info.get('url') or info.get('formats', [{}])[-1].get('url')
 
-        # 2. Analisi silenzio (utilizzando l'URL solo audio per evitare errori)
+        # 2. Analisi silenzio
         print(f"🔍 Rank {rank}: Analisi silenzio...")
         start_intro = get_start_audio(audio_url, d_cfg)
         
         if start_intro > 0:
-            print(f"🔇 Rank {rank}: Rilevati {start_intro:.2f}s di silenzio. Taglio applicato.")
-        else:
-            print(f"🔊 Rank {rank}: Nessun silenzio rilevato.")
+            print(f"🔇 Rank {rank}: Rilevati {start_intro:.2f}s di silenzio iniziale.")
+        
+        # --- CONTROLLO VIDEO TROPPO CORTO ---
+        if duration_total <= total_dur:
+            print(f"ℹ️ Rank {rank}: Video totale ({duration_total}s) più corto o uguale alla durata target ({total_dur}s). Scarico intero.")
+            ydl_opts_full = {
+                'format': 'bestvideo[ext=mp4][height<=1080]+bestaudio[ext=m4a]/best[ext=mp4]',
+                'outtmpl': output_path, 'quiet': True,
+                'external_downloader': 'ffmpeg',
+                'external_downloader_args': {'ffmpeg_i': ['-ss', str(start_intro)]} # Taglia solo il silenzio se c'è
+            }
+            with yt_dlp.YoutubeDL(ydl_opts_full) as ydl: ydl.download([url])
+            return True
 
-        # 3. Calcolo highlight con protezione "fine video"
+        # 3. Calcolo highlight con protezione fine video
         if heatmap:
-            # Trova il punto più alto, ma sottrae 2 secondi per dare contesto
             best_moment = max(heatmap, key=lambda x: x['value'])['start_time']
             start_highlight = max(0, best_moment - 2)
         else:
             start_highlight = duration_total * d_cfg.get('chorus_percentage', 0.25)
 
         # --- PROTEZIONE FINE VIDEO ---
-        # Verifichiamo se tra start_highlight e la fine del video c'è abbastanza spazio per dur_b
-        # Aggiungiamo un piccolo margine di 0.5s per evitare errori di arrotondamento di FFmpeg
         if (start_highlight + dur_b) > duration_total:
             nuovo_start = max(0, duration_total - dur_b - 0.5)
-            print(f"⚠️ Rank {rank}: Highlight troppo vicino alla fine. Spostato da {start_highlight:.1f}s a {nuovo_start:.1f}s")
+            print(f"⚠️ Rank {rank}: Highlight spostato a {nuovo_start:.1f}s (troppo vicino alla fine).")
             start_highlight = nuovo_start
-        # ------------------------------
 
         # 4. Esecuzione Tagli
+        # Caso A: Clip unica (se l'intro e l'highlight si sovrappongono)
         if (start_intro + dur_a >= start_highlight):
-            print(f"⚠️ Rank {rank}: Inizio si sovrappone con highlight, download Clip continua...")
+            print(f"⚠ Rank {rank}: Clip continua senza crossfade...")
             ydl_opts_direct = {
                 'format': 'bestvideo[ext=mp4][height<=1080]+bestaudio[ext=m4a]/best[ext=mp4]',
                 'outtmpl': output_path, 'quiet': True,
@@ -109,15 +116,19 @@ def process_video(url, rank):
                 'external_downloader_args': {'ffmpeg_i': ['-ss', str(start_intro), '-t', str(total_dur)]}
             }
             with yt_dlp.YoutubeDL(ydl_opts_direct) as ydl: ydl.download([url])
+        
+        # Caso B: Crossfade
         else:
-            print(f"🎬 Rank {rank}: Crossfade...")
+            print(f"🎬 Rank {rank}: Generazione Crossfade ({dur_a:.1f}s + {dur_b:.1f}s)...")
             ydl_opts_temp = {'format': 'bestvideo[ext=mp4][height<=1080]+bestaudio[ext=m4a]/best[ext=mp4]', 'outtmpl': temp_file, 'quiet': True}
             with yt_dlp.YoutubeDL(ydl_opts_temp) as ydl: ydl.download([url])
 
             seg_a = ffmpeg.input(temp_file, ss=start_intro, t=dur_a)
             seg_b = ffmpeg.input(temp_file, ss=start_highlight, t=dur_b)
+            
             v_merged = ffmpeg.filter([seg_a.video, seg_b.video], 'xfade', transition='fade', duration=xfade, offset=dur_a-xfade)
             a_merged = ffmpeg.filter([seg_a.audio, seg_b.audio], 'acrossfade', d=xfade)
+            
             ffmpeg.output(v_merged, a_merged, output_path, vcodec='libx264', acodec='aac', pix_fmt='yuv420p', crf=21).run(overwrite_output=True, quiet=True)
 
         if os.path.exists(temp_file): os.remove(temp_file)
@@ -125,6 +136,7 @@ def process_video(url, rank):
         return True
 
     except Exception as e:
+        if os.path.exists(temp_file): os.remove(temp_file)
         print(f"✗ Errore Rank {rank}: {e}")
         return False
 
