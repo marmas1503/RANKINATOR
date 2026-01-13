@@ -1,9 +1,8 @@
 # RANKINATOR
 Automatic party ranking creator
 
-=======================================================
 PER FARE ANDARE IL CODICE 
-=======================================================
+
 
 0. installa python
 
