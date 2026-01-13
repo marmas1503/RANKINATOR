@@ -1,2 +1,16 @@
-# Ignore the 'output' folder 
+
+# Python compilato
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Cartelle di output (per evitare di caricare giga di video e immagini su Git)
 output/
+
+# File di sistema e log
+*.log
+failed_urls.csv
+
+# File Excel (opzionale, se il dataset contiene dati sensibili o è molto pesante)
+# resources/dataset/dataset.xlsx
