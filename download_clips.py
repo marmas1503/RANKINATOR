@@ -22,6 +22,12 @@ def timestamp_to_seconds(ts):
     except:
         return None
 
+# Funzione utile per convertire i secondi di nuovo in formato leggibile 00:00 per il report
+def seconds_to_hms(seconds):
+    if seconds is None: return "FAILED"
+    m, s = divmod(int(seconds), 60)
+    return f"{m:02d}:{s:02d}"
+
 def get_rank_settings(rank, d_cfg):
     duration_map = d_cfg.get('duration_map', {})
     default_dur = d_cfg.get('default_duration', 15)
@@ -63,11 +69,9 @@ def process_video(url, rank, manual_ts=None):
     total_dur, split_pct = get_rank_settings(rank, d_cfg)
     dur_a, dur_b = total_dur * split_pct, total_dur * (1 - split_pct)
     xfade = d_cfg.get('crossfade_duration', 1.0)
-
-    # Definizione formati compatibili (H264 + AAC)
-    # mp4[vcodec^=avc1] seleziona H.264
-    # m4a seleziona AAC
     fmt_h264_aac = 'bestvideo[ext=mp4][vcodec^=avc1][height<=1080]+bestaudio[ext=m4a]/best[ext=mp4]/best'
+
+    start_highlight = 0.0 # Valore di fallback
 
     try:
         # 1. Estrazione Info
@@ -80,26 +84,9 @@ def process_video(url, rank, manual_ts=None):
             heatmap = info.get('heatmap')
             duration_total = info.get('duration', 0)
 
-        # 2. Analisi silenzio
-        print(f"🔍 Rank {rank}: Analisi silenzio...")
         start_intro = get_start_audio(audio_url, d_cfg)
         
-        # 3. Controllo Video Corto
-        if duration_total <= total_dur:
-            print(f"ℹ️ Rank {rank}: Video troppo corto. Scarico intero (H264/AAC).")
-            ydl_opts_full = {
-                'format': fmt_h264_aac,
-                'outtmpl': output_path, 'quiet': True,
-                'external_downloader': 'ffmpeg',
-                'external_downloader_args': {
-                    'ffmpeg_i': ['-ss', str(start_intro)],
-                    'ffmpeg_o': ['-vcodec', 'libx264', '-acodec', 'aac', '-pix_fmt', 'yuv420p']
-                }
-            }
-            with yt_dlp.YoutubeDL(ydl_opts_full) as ydl: ydl.download([url])
-            return True
-
-        # 4. Calcolo highlight
+        # 4. Calcolo highlight (Spostato prima del controllo video corto per il report)
         manual_seconds = timestamp_to_seconds(manual_ts)
         if manual_seconds is not None:
             start_highlight = max(0, manual_seconds - 2)
@@ -112,12 +99,23 @@ def process_video(url, rank, manual_ts=None):
         if (start_highlight + dur_b) > duration_total:
             start_highlight = max(0, duration_total - dur_b - 0.5)
 
+        # 3. Controllo Video Corto
+        if duration_total <= total_dur:
+            ydl_opts_full = {
+                'format': fmt_h264_aac, 'outtmpl': output_path, 'quiet': True,
+                'external_downloader': 'ffmpeg',
+                'external_downloader_args': {
+                    'ffmpeg_i': ['-ss', str(start_intro)],
+                    'ffmpeg_o': ['-vcodec', 'libx264', '-acodec', 'aac', '-pix_fmt', 'yuv420p']
+                }
+            }
+            with yt_dlp.YoutubeDL(ydl_opts_full) as ydl: ydl.download([url])
+            return start_highlight
+
         # 5. Esecuzione Tagli
         if (start_intro + dur_a >= start_highlight):
-            print(f"⚠ Rank {rank}: Clip unica (H264/AAC)...")
             ydl_opts_direct = {
-                'format': fmt_h264_aac,
-                'outtmpl': output_path, 'quiet': True,
+                'format': fmt_h264_aac, 'outtmpl': output_path, 'quiet': True,
                 'external_downloader': 'ffmpeg',
                 'external_downloader_args': {
                     'ffmpeg_i': ['-ss', str(start_intro), '-t', str(total_dur)],
@@ -126,7 +124,6 @@ def process_video(url, rank, manual_ts=None):
             }
             with yt_dlp.YoutubeDL(ydl_opts_direct) as ydl: ydl.download([url])
         else:
-            print(f"🎬 Rank {rank}: Generazione Crossfade (H264/AAC)...")
             ydl_opts_temp = {'format': fmt_h264_aac, 'outtmpl': temp_file, 'quiet': True}
             with yt_dlp.YoutubeDL(ydl_opts_temp) as ydl: ydl.download([url])
 
@@ -135,20 +132,14 @@ def process_video(url, rank, manual_ts=None):
             v_merged = ffmpeg.filter([seg_a.video, seg_b.video], 'xfade', transition='fade', duration=xfade, offset=dur_a-xfade)
             a_merged = ffmpeg.filter([seg_a.audio, seg_b.audio], 'acrossfade', d=xfade)
             
-            # Esportazione con codec specificati
-            ffmpeg.output(v_merged, a_merged, output_path, 
-                          vcodec='libx264', 
-                          acodec='aac', 
-                          pix_fmt='yuv420p', 
-                          crf=21).run(overwrite_output=True, quiet=True)
+            ffmpeg.output(v_merged, a_merged, output_path, vcodec='libx264', acodec='aac', pix_fmt='yuv420p', crf=21).run(overwrite_output=True, quiet=True)
 
         if os.path.exists(temp_file): os.remove(temp_file)
-        print(f"✓ Rank {rank} completato.")
-        return True
+        return start_highlight
     except Exception as e:
         if os.path.exists(temp_file): os.remove(temp_file)
         print(f"✗ Errore Rank {rank}: {e}")
-        return False
+        return None
 
 if __name__ == "__main__":
     cfg = load_config()
@@ -162,9 +153,27 @@ if __name__ == "__main__":
     ts_col_name = d_cfg.get('timestamp_col')
     ts_col_idx = column_index_from_string(ts_col_name) - 1 if ts_col_name else None
     
+    # Lista per accumulare i dati del report
+    report_data = []
+
     for _, row in df.iterrows():
         url = row.iloc[u_col_idx]
         rank = row.iloc[r_col_idx]
         ts_val = row.iloc[ts_col_idx] if ts_col_idx is not None else None
+        
         if pd.isna(url) or pd.isna(rank): continue
-        process_video(url, int(rank), ts_val)
+        
+        # Esecuzione e recupero timestamp
+        result_ts = process_video(url, int(rank), ts_val)
+        
+        # Aggiunta al report
+        report_data.append({
+            'Rank': int(rank),
+            'Link': url,
+            'Highlight_Timestamp': seconds_to_hms(result_ts)
+        })
+
+    # Generazione CSV
+    report_df = pd.DataFrame(report_data)
+    report_df.to_csv('report.csv', index=False, encoding='utf-8')
+    print("\n📄 report.csv generato con successo.")
