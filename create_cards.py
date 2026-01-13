@@ -32,26 +32,25 @@ group1_names = ["marmas", "selfie veloce", "masterone", "mizzica", "pezzente", "
 group1_cols = ["J", "K", "L", "M", "N", "O", "P", "Q", "R", "S"] 
 
 for i, name in enumerate(group1_names):
-    VOTERS_MAP.append({'name': name, 'col': group1_cols[i], 'coord': (1435, 80 + (i * 100))})
+    VOTERS_MAP.append({'name': name, 'col': group1_cols[i], 'coord': (1435, 80 + (i * 103))})
 
 group2_names = ["pete", "fuschio", "er gooning", "just", "cole", "renato", "bronsa", "godeleti", "grok"]
 group2_cols = ["T", "U", "V", "W", "X", "Y", "Z", "AA", "AB"]
 
 for i, name in enumerate(group2_names):
-    VOTERS_MAP.append({'name': name, 'col': group2_cols[i], 'coord': (1727, 80 + (i * 100))})
+    VOTERS_MAP.append({'name': name, 'col': group2_cols[i], 'coord': (1727, 80 + (i * 103))})
 
 # --- 3. CATEGORY ICONS ---
+ICONS_DIRECTORY = 'resources/icons/'
 ICONS_MAP = {
-    'OST_videogame': 'icons/OST_videogame.png',
-    'Drama':  'icons/drama.png',
-    'Comedy': 'icons/comedy.png',
+    'OST_videogame': 'OST_videogame.png',
 }
 ICON_COORD = (1115, 830)
 
 # --- 4. GENERAL SETTINGS ---
-EXCEL_FILE = 'dataset.xlsx'
-BASE_IMAGE = 'template.png'
-OUTPUT_FOLDER = 'generated_cards'
+EXCEL_FILE = 'resources/dataset/dataset.xlsx'
+BASE_IMAGE = 'resources/template/template.png'
+OUTPUT_FOLDER = 'output/cards'
 FONT_PATH = 'comic.ttf' 
 
 if not os.path.exists(OUTPUT_FOLDER): os.makedirs(OUTPUT_FOLDER)

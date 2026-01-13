@@ -4,17 +4,24 @@ import ffmpeg
 import os
 
 # --- CONFIGURATION ---
-EXCEL_FILE = 'dataset.xlsx'
-FAILED_LOG_FILE = 'failed_urls.csv'
+EXCEL_FILE = 'resources/dataset/dataset.xlsx'
 URL_COL_LETTER = 'G'
 RANK_COL_LETTER = 'A'
 CLIP_DURATION = 30
 BEFORE_HIGHLIGHT = 2
 DEFAULT_START_CLIP = 30
-OUTPUT_DIR = 'downloaded_clips'
 
-if not os.path.exists(OUTPUT_DIR):
-    os.makedirs(OUTPUT_DIR)
+# Cartelle di Output
+BASE_OUTPUT_DIR = 'output'
+OUTPUT_CLIPS_DIR = os.path.join(BASE_OUTPUT_DIR, 'clips')
+TEMP_DIR = os.path.join(BASE_OUTPUT_DIR, 'temp')
+# Il CSV ora viene salvato dentro 'output'
+FAILED_LOG_FILE = os.path.join(BASE_OUTPUT_DIR, 'failed_urls.csv')
+
+# Creazione struttura cartelle
+for directory in [OUTPUT_CLIPS_DIR, TEMP_DIR]:
+    if not os.path.exists(directory):
+        os.makedirs(directory)
 
 def column_letter_to_index(letter):
     letter = letter.upper()
@@ -24,20 +31,18 @@ def column_letter_to_index(letter):
     return index - 1
 
 def process_video(url, rank):
-    filename = f"Rank_{rank}.mp4"
-    temp_filename = f"temp_{rank}.mp4"
-    output_path = os.path.join(OUTPUT_DIR, filename)
+    filename = f"{rank}_clip.mp4"
+    temp_filename = os.path.join(TEMP_DIR, f"temp_{rank}.mp4")
+    output_path = os.path.join(OUTPUT_CLIPS_DIR, filename)
 
     try:
         # 1. Recupero Info e Heatmap
-        # Corretto l'errore della stringa 'ejs:github' passandola correttamente
         ydl_opts_meta = {
             'quiet': True,
             'no_warnings': True,
         }
         
         with yt_dlp.YoutubeDL(ydl_opts_meta) as ydl:
-            # Aggiornamento parametri per bypassare i blocchi
             ydl.params['remote_components'] = ['ejs:github'] 
             info = ydl.extract_info(url, download=False)
             heatmap = info.get('heatmap')
@@ -51,7 +56,6 @@ def process_video(url, rank):
             duration = DEFAULT_START_CLIP
 
         # 2. DOWNLOAD FORMATO IBRIDO
-        # Chiediamo il miglior MP4 disponibile che contenga già tutto
         ydl_opts_dl = {
             'format': 'bestvideo[ext=mp4]+bestaudio[ext=m4a]/best[ext=mp4]/best',
             'outtmpl': temp_filename,
@@ -65,15 +69,14 @@ def process_video(url, rank):
         if not os.path.exists(temp_filename):
             return False
 
-        # 3. TAGLIO E RE-ENCODING SEMPLIFICATO
-        # Riduciamo i parametri all'osso per evitare conflitti di codec
+        # 3. TAGLIO E RE-ENCODING
         (
             ffmpeg
             .input(temp_filename, ss=start_timestamp, t=duration)
             .output(output_path, 
                     vcodec='libx264', 
                     acodec='aac', 
-                    pix_fmt='yuv420p', # Questo serve per farli vedere su Windows
+                    pix_fmt='yuv420p', 
                     crf=23)
             .run(overwrite_output=True, quiet=True)
         )
@@ -81,12 +84,13 @@ def process_video(url, rank):
         if os.path.exists(temp_filename):
             os.remove(temp_filename)
 
-        print(f"✓ Success: {filename}")
+        print(f"✓ Successo: {filename}")
         return True
 
     except Exception as e:
-        if os.path.exists(temp_filename): os.remove(temp_filename)
-        print(f"✗ Error at Rank {rank}: {e}")
+        if os.path.exists(temp_filename):
+            os.remove(temp_filename)
+        print(f"✗ Errore al Rank {rank}: {e}")
         return False
 
 def main():
@@ -94,6 +98,10 @@ def main():
     rank_idx = column_letter_to_index(RANK_COL_LETTER)
     failed_videos = []
     
+    if not os.path.exists(EXCEL_FILE):
+        print(f"Errore: Il file {EXCEL_FILE} non esiste!")
+        return
+
     df = pd.read_excel(EXCEL_FILE)
     
     for _, row in df.iterrows():
@@ -101,13 +109,27 @@ def main():
         rank = row.iloc[rank_idx]
         if pd.isna(url): continue
         
-        print(f"\nProcessing Rank {rank}...")
+        print(f"\nElaborazione Rank {rank}...")
         if not process_video(url, rank):
             failed_videos.append({'Position': rank, 'URL': url})
 
+    # Salvataggio CSV nella cartella di output
     if failed_videos:
-        pd.DataFrame(failed_videos).to_csv(FAILED_LOG_FILE, index=False)
-        print(f"\nLog: {FAILED_LOG_FILE}")
+        pd.DataFrame(failed_videos).to_csv(FAILED_LOG_FILE, index=False, encoding='utf-8-sig')
+        print(f"\n--- LOG ERRORI GENERATO ---")
+        print(f"File salvato in: {FAILED_LOG_FILE}")
+    else:
+        # Se esiste un vecchio log di una sessione precedente, lo rimuoviamo per pulizia
+        if os.path.exists(FAILED_LOG_FILE):
+            os.remove(FAILED_LOG_FILE)
+        print("\n--- COMPLETATO: Nessun errore riscontrato! ---")
+    
+    # Pulizia cartella temp se vuota
+    try:
+        if os.path.exists(TEMP_DIR) and not os.listdir(TEMP_DIR):
+            os.rmdir(TEMP_DIR)
+    except:
+        pass
 
 if __name__ == "__main__":
     main()
