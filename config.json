@@ -2,6 +2,16 @@
   "excel_file": "resources/dataset/dataset.xlsx",
   "font_path": "comic.ttf",
   "download_config": {
+    "default_duration": 30,
+    "default_split_percentage": 0.5,
+    "duration_map": {
+        "1-3": { "total": 100, "split": 0.4 },
+        "4-10": { "total": 40, "split": 0.3 },
+        "11-50": { "total": 40, "split": 0.2 }
+    },
+    "crossfade_duration": 1.0,
+    "silence_threshold": "-20dB",
+"silence_duration": "0.1",
     "url_col": "G",
     "rank_col": "A",
     "clip_duration": 30,
