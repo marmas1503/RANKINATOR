@@ -8,7 +8,11 @@ __pycache__/
 # Cartelle di output (per evitare di caricare giga di video e immagini su Git)
 output/
 
+# Cartelle di risorse
+resources/
+
 # File di sistema e log
+report.csv
 *.log
 failed_urls.csv
 

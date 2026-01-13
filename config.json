@@ -1,5 +1,5 @@
 {
-  "excel_file": "resources/dataset/dataset.xlsx",
+  "excel_file": "resources/dataset/dataset2.xlsx",
   "font_path": "comic.ttf",
   "download_config": {
     "default_duration": 30,

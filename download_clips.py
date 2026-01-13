@@ -22,11 +22,19 @@ def timestamp_to_seconds(ts):
     except:
         return None
 
-# Funzione utile per convertire i secondi di nuovo in formato leggibile 00:00 per il report
 def seconds_to_hms(seconds):
     if seconds is None: return "FAILED"
     m, s = divmod(int(seconds), 60)
     return f"{m:02d}:{s:02d}"
+
+def is_valid_video_url(url):
+    """Verifica se l'URL non è un'immagine o un link spazzatura."""
+    if not isinstance(url, str): return False
+    invalid_patterns = [r'images\?q=tbn', r'\.jpg$', r'\.png$', r'\.webp$', r'gstatic\.com']
+    for pattern in invalid_patterns:
+        if re.search(pattern, url):
+            return False
+    return True
 
 def get_rank_settings(rank, d_cfg):
     duration_map = d_cfg.get('duration_map', {})
@@ -71,10 +79,9 @@ def process_video(url, rank, manual_ts=None):
     xfade = d_cfg.get('crossfade_duration', 1.0)
     fmt_h264_aac = 'bestvideo[ext=mp4][vcodec^=avc1][height<=1080]+bestaudio[ext=m4a]/best[ext=mp4]/best'
 
-    start_highlight = 0.0 # Valore di fallback
-
     try:
         # 1. Estrazione Info
+        print(f"📡 Rank {rank}: Recupero informazioni video...")
         with yt_dlp.YoutubeDL({'quiet': True, 'format': 'bestaudio[ext=m4a]/bestaudio'}) as ydl:
             audio_info = ydl.extract_info(url, download=False)
             audio_url = audio_info['url']
@@ -84,23 +91,29 @@ def process_video(url, rank, manual_ts=None):
             heatmap = info.get('heatmap')
             duration_total = info.get('duration', 0)
 
+        # 2. Analisi Silenzio
+        print(f"🔍 Rank {rank}: Analisi del silenzio iniziale...")
         start_intro = get_start_audio(audio_url, d_cfg)
         
-        # 4. Calcolo highlight (Spostato prima del controllo video corto per il report)
+        # 3. Calcolo Highlight
         manual_seconds = timestamp_to_seconds(manual_ts)
         if manual_seconds is not None:
             start_highlight = max(0, manual_seconds - 2)
+            print(f"📍 Rank {rank}: Uso timestamp manuale ({manual_ts}) -> Start highlight: {start_highlight}s")
         elif heatmap:
             best_moment = max(heatmap, key=lambda x: x['value'])['start_time']
             start_highlight = max(0, best_moment - 2)
+            print(f"🔥 Rank {rank}: Uso heatmap YouTube -> Start highlight: {start_highlight}s")
         else:
             start_highlight = duration_total * d_cfg.get('chorus_percentage', 0.25)
+            print(f"⚖️ Rank {rank}: Heatmap assente, uso fallback al {d_cfg.get('chorus_percentage', 0.25)*100}%")
 
         if (start_highlight + dur_b) > duration_total:
             start_highlight = max(0, duration_total - dur_b - 0.5)
 
-        # 3. Controllo Video Corto
+        # 4. Download e Processing
         if duration_total <= total_dur:
+            print(f"ℹ️ Rank {rank}: Video corto ({duration_total}s), download integrale...")
             ydl_opts_full = {
                 'format': fmt_h264_aac, 'outtmpl': output_path, 'quiet': True,
                 'external_downloader': 'ffmpeg',
@@ -112,8 +125,8 @@ def process_video(url, rank, manual_ts=None):
             with yt_dlp.YoutubeDL(ydl_opts_full) as ydl: ydl.download([url])
             return start_highlight
 
-        # 5. Esecuzione Tagli
         if (start_intro + dur_a >= start_highlight):
+            print(f"⚠ Rank {rank}: Segmenti sovrapposti, scarico clip unica...")
             ydl_opts_direct = {
                 'format': fmt_h264_aac, 'outtmpl': output_path, 'quiet': True,
                 'external_downloader': 'ffmpeg',
@@ -124,6 +137,7 @@ def process_video(url, rank, manual_ts=None):
             }
             with yt_dlp.YoutubeDL(ydl_opts_direct) as ydl: ydl.download([url])
         else:
+            print(f"🎬 Rank {rank}: Generazione Crossfade ({dur_a}s + {dur_b}s)...")
             ydl_opts_temp = {'format': fmt_h264_aac, 'outtmpl': temp_file, 'quiet': True}
             with yt_dlp.YoutubeDL(ydl_opts_temp) as ydl: ydl.download([url])
 
@@ -135,10 +149,12 @@ def process_video(url, rank, manual_ts=None):
             ffmpeg.output(v_merged, a_merged, output_path, vcodec='libx264', acodec='aac', pix_fmt='yuv420p', crf=21).run(overwrite_output=True, quiet=True)
 
         if os.path.exists(temp_file): os.remove(temp_file)
+        print(f"✅ Rank {rank} completato con successo.")
         return start_highlight
+
     except Exception as e:
         if os.path.exists(temp_file): os.remove(temp_file)
-        print(f"✗ Errore Rank {rank}: {e}")
+        print(f"❌ Errore Rank {rank}: {e}")
         return None
 
 if __name__ == "__main__":
@@ -147,13 +163,13 @@ if __name__ == "__main__":
     os.makedirs(d_cfg['output_dir'], exist_ok=True)
     os.makedirs(d_cfg['temp_dir'], exist_ok=True)
     
+    print(f"🚀 Avvio processo di download da Excel: {cfg['excel_file']}")
     df = pd.read_excel(cfg['excel_file'])
     u_col_idx = column_index_from_string(d_cfg['url_col']) - 1
     r_col_idx = column_index_from_string(d_cfg['rank_col']) - 1
     ts_col_name = d_cfg.get('timestamp_col')
     ts_col_idx = column_index_from_string(ts_col_name) - 1 if ts_col_name else None
     
-    # Lista per accumulare i dati del report
     report_data = []
 
     for _, row in df.iterrows():
@@ -163,17 +179,26 @@ if __name__ == "__main__":
         
         if pd.isna(url) or pd.isna(rank): continue
         
-        # Esecuzione e recupero timestamp
-        result_ts = process_video(url, int(rank), ts_val)
+        url_str = str(url).strip()
+
+        if not is_valid_video_url(url_str):
+            print(f"🚫 Salto Rank {rank}: URL non valido o immagine ({url_str[:30]}...)")
+            report_data.append({
+                'Rank': int(rank),
+                'Link': url_str,
+                'Highlight_Timestamp': "FAILED"
+            })
+            continue
         
-        # Aggiunta al report
+        result_ts = process_video(url_str, int(rank), ts_val)
+        
         report_data.append({
             'Rank': int(rank),
-            'Link': url,
+            'Link': url_str,
             'Highlight_Timestamp': seconds_to_hms(result_ts)
         })
 
-    # Generazione CSV
+    print(f"\n📊 Salvataggio report finale...")
     report_df = pd.DataFrame(report_data)
     report_df.to_csv('report.csv', index=False, encoding='utf-8')
-    print("\n📄 report.csv generato con successo.")
+    print("✨ Tutto completato. Controlla la cartella dei risultati e report.csv.")
