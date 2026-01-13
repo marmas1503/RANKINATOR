@@ -14,6 +14,7 @@
 "silence_duration": "0.1",
     "url_col": "G",
     "rank_col": "A",
+    "timestamp_col": "C",
     "clip_duration": 30,
     "before_highlight": 2,
     "chorus_percentage": 0.25,
