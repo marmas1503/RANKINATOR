@@ -28,7 +28,7 @@
     "category_col": "C",
     "icon_coord": [1115, 830],
     "icons_directory": "resources/icons/",
-    "hidden_categories": ["Drama", "Mystery"],
+    "hidden_categories": ["Intro"],
     "fields": {
       "Rank Number": {"col": "A", "coord": [140, 843], "size": 66, "color": [255, 255, 255]},
       "Average":     {"col": "I", "coord": [196, 961], "size": 32, "color": [255, 255, 255]}, 
