@@ -19,18 +19,31 @@ def get_start_audio(audio_url, d_cfg):
         return silence_end
     except: return 0.0
 
-def calculate_highlight(heatmap, duration_total, manual_seconds, d_cfg):
-    h_limit = d_cfg.get('heatmap_limit', 0.85)
-    b_highlight = d_cfg.get('before_highlight_offset', 2.0)
+def calculate_highlight(heatmap, total_duration, manual_ts, total_clip_duration, d_cfg):
+    """
+    manual_ts: secondi estratti dall'Excel (o None)
+    total_clip_duration: durata totale della clip (es. 30s)
+    """
+    start_point = 0
+
+    # 1. Se c'è un timestamp manuale
+    if manual_ts is not None:
+        # Iniziamo 1 secondo prima del timestamp indicato
+        start_point = max(0, manual_ts - 1)
     
-    if manual_seconds is not None:
-        return max(0, manual_seconds - b_highlight)
+    # 2. Se non c'è manuale, usiamo la Heatmap
+    elif heatmap:
+        best_point = max(heatmap, key=lambda x: x['value'])
+        start_point = best_point.get('start_time', total_duration / 2)
     
-    if heatmap:
-        end_threshold = duration_total * h_limit
-        filtered = [p for p in heatmap if p['start_time'] < end_threshold]
-        if filtered:
-            best = max(filtered, key=lambda x: x['value'])['start_time']
-            return max(0, best - b_highlight)
-            
-    return duration_total * d_cfg.get('chorus_percentage', 0.25)
+    # 3. Fallback
+    else:
+        start_point = total_duration / 2
+
+    # --- CONTROLLO SICUREZZA FINE VIDEO ---
+    # Se il punto di inizio + la durata della clip supera la fine del video...
+    if start_point + total_clip_duration > total_duration:
+        # Sposta l'inizio indietro per far stare tutta la clip
+        start_point = max(0, total_duration - total_clip_duration)
+
+    return start_point

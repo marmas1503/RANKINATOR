@@ -12,7 +12,7 @@ output/
 resources/dataset
 
 # File di sistema e log
-*report.csv*
+*report*
 *.log
 failed_urls.csv
 
