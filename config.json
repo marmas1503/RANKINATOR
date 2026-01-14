@@ -1,8 +1,8 @@
 {
   "global_settings": {
-    "excel_file": "resources/dataset/dataset2.xlsx",
+    "excel_file": "resources/dataset/dataset.xlsx",
     "font_path": "comic.ttf",
-    "max_workers": 1
+    "max_workers": 3
   },
   "excel_mapping": {
     "rank_col": "A",
