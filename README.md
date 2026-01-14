@@ -82,11 +82,11 @@ This README also explains each top-level entry from `config.json`:
 
 ## Usage
 
-#Run the entire pipeline
+# Run the entire pipeline
 
 Double click the `start.bat` file. It will run the three steps sequentially.
 
-#Run the steps individually
+# Run the steps individually
 
 ```powershell
 # Download video segments referenced by the Excel file
