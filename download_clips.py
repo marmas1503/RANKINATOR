@@ -1,21 +1,20 @@
 import os
 import pandas as pd
 import time
+from multiprocessing import Pool
 from openpyxl.utils import column_index_from_string
 import yt_dlp
+from tqdm import tqdm
 
-# Importiamo i tuoi moduli
 from modules.config_loader import load_config
 from modules.utils import timestamp_to_seconds, seconds_to_hms, is_valid_video_url
 from modules.audio_analyzer import get_start_audio, calculate_highlight
 from modules.video_processor import download_and_process
 
 def get_rank_settings(rank, d_cfg):
-    """Recupera durate e split dal config"""
     duration_map = d_cfg.get('duration_map', {})
     default_dur = d_cfg.get('default_duration', 30)
     default_split = d_cfg.get('default_split_percentage', 0.5)
-    
     for r_range, settings in duration_map.items():
         try:
             start_r, end_r = map(int, r_range.split('-'))
@@ -26,69 +25,56 @@ def get_rank_settings(rank, d_cfg):
         except: continue
     return default_dur, default_split
 
+def worker(task_data):
+    rank, url, manual_ts, d_cfg = task_data
+    try:
+        temp_file = os.path.join(d_cfg['temp_dir'], f"temp_{rank}.mp4")
+        output_path = os.path.join(d_cfg['output_dir'], f"{rank}_clip.mp4")
+        
+        with yt_dlp.YoutubeDL({'quiet': True, 'no_warnings': True}) as ydl:
+            info = ydl.extract_info(url, download=False)
+            audio_url = info.get('url') or info['formats'][-1]['url']
+
+        start_intro = get_start_audio(audio_url, d_cfg)
+        start_highlight = calculate_highlight(info.get('heatmap'), info.get('duration', 0), 
+                                              timestamp_to_seconds(manual_ts), d_cfg)
+
+        total_dur, split_pct = get_rank_settings(rank, d_cfg)
+        dur_a, dur_b = total_dur * split_pct, total_dur * (1 - split_pct)
+
+        download_and_process(url, rank, start_intro, start_highlight, total_dur, 
+                             dur_a, dur_b, d_cfg, temp_file, output_path)
+        return {'Rank': rank, 'Status': 'OK', 'Timestamp': seconds_to_hms(start_highlight)}
+    except Exception as e:
+        return {'Rank': rank, 'Status': f'Error: {str(e)}', 'Timestamp': 'FAILED'}
+
 def main():
-    print("🚀 [MAIN] Avvio Rankinator...")
     cfg = load_config()
+    g_cfg = cfg['global_settings']
+    m_cfg = cfg['excel_mapping']
     d_cfg = cfg['download_config']
     
-    # Pulizia/Creazione cartelle
+    max_workers = g_cfg.get('max_workers', 4)
+    print(f"🚀 [DOWNLOADER] Avvio con {max_workers} processi simultanei.")
+    
     os.makedirs(d_cfg['output_dir'], exist_ok=True)
     os.makedirs(d_cfg['temp_dir'], exist_ok=True)
 
-    print(f"📖 [MAIN] Lettura Excel: {cfg['excel_file']}")
-    df = pd.read_excel(cfg['excel_file'])
-    
-    u_idx = column_index_from_string(d_cfg['url_col']) - 1
-    r_idx = column_index_from_string(d_cfg['rank_col']) - 1
-    ts_idx = column_index_from_string(d_cfg.get('timestamp_col')) - 1 if d_cfg.get('timestamp_col') else None
+    df = pd.read_excel(g_cfg['excel_file'])
+    u_idx = column_index_from_string(m_cfg['url_col']) - 1
+    r_idx = column_index_from_string(m_cfg['rank_col']) - 1
+    ts_idx = column_index_from_string(m_cfg['timestamp_col']) - 1
 
-    for index, row in df.iterrows():
-        rank = row.iloc[r_idx]
-        url = str(row.iloc[u_idx]).strip()
-        manual_ts = row.iloc[ts_idx] if ts_idx is not None else None
+    tasks = [(int(row.iloc[r_idx]), str(row.iloc[u_idx]).strip(), row.iloc[ts_idx], d_cfg) 
+             for _, row in df.iterrows() if is_valid_video_url(str(row.iloc[u_idx]))]
 
-        if pd.isna(url) or url == "nan" or not is_valid_video_url(url):
-            print(f"⏩ [MAIN] Salto riga {index+1}: URL non valido ({url})")
-            continue
+    results = []
+    with Pool(processes=max_workers) as pool:
+        for result in tqdm(pool.imap_unordered(worker, tasks), total=len(tasks), desc="Downloading Clips"):
+            results.append(result)
 
-        print(f"\n--- 🛠️  ELABORAZIONE RANK {rank} ---")
-        start_exec = time.time()
-
-        try:
-            # 1. Recupero Info e URL Audio
-            print(f"📡 [STEP 1] Estrazione metadati da YouTube...")
-            with yt_dlp.YoutubeDL({'quiet': True}) as ydl:
-                info = ydl.extract_info(url, download=False)
-                # Fallback per l'URL audio necessario per la silence detection
-                audio_url = info.get('url') or info['formats'][-1]['url']
-
-            # 2. Analisi (Moduli Analyzer)
-            print(f"🔍 [STEP 2] Analisi audio e heatmap...")
-            start_intro = get_start_audio(audio_url, d_cfg)
-            start_highlight = calculate_highlight(info.get('heatmap'), info.get('duration', 0), timestamp_to_seconds(manual_ts), d_cfg)
-
-            # 3. Calcolo durate specifiche per questo Rank
-            total_dur, split_pct = get_rank_settings(rank, d_cfg)
-            dur_a = total_dur * split_pct
-            dur_b = total_dur * (1 - split_pct)
-            
-            temp_file = os.path.join(d_cfg['temp_dir'], f"temp_{rank}.mp4")
-            output_path = os.path.join(d_cfg['output_dir'], f"{rank}_clip.mp4")
-
-            # 4. Processamento Video (Modulo Video Processor)
-            print(f"🎬 [STEP 3] Passaggio al Video Processor...")
-            download_and_process(
-                url, rank, start_intro, start_highlight, 
-                total_dur, dur_a, dur_b, d_cfg, 
-                temp_file, output_path
-            )
-
-            print(f"✅ [MAIN] Rank {rank} completato in {time.time() - start_exec:.1f}s")
-
-        except Exception as e:
-            print(f"❌ [MAIN] ERRORE CRITICO al Rank {rank}: {str(e)}")
-            import traceback
-            traceback.print_exc() # Questo ti dice esattamente IN QUALE RIGA è l'errore
+    pd.DataFrame(results).sort_values('Rank').to_csv('report_download.csv', index=False)
+    print("✨ Download completato.")
 
 if __name__ == "__main__":
     main()
