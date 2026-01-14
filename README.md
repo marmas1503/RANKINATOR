@@ -33,7 +33,7 @@ iwr https://deno.land/install.ps1 -useb | iex
 ```
 
 ## Configuration
-All runtime settings are in `config.json`. A detailed guide is available at [SETTINGS_GUIDE.md](SETTINGS_GUIDE.md).
+All runtime settings are in `config.json`. A detailed guide is available at [SETTINGS_GUIDE.md](docs/SETTINGS_GUIDE_EN.md).
 
 This README also explains each top-level entry from `config.json`:
 

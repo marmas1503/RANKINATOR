@@ -9,12 +9,12 @@ __pycache__/
 output/
 
 # dataset
-resources/dataset
 
 # File di sistema e log
 *report*
 *.log
+*.xlsx#
 failed_urls.csv
 
 # File Excel (opzionale, se il dataset contiene dati sensibili o è molto pesante)
-# resources/dataset/dataset.xlsx
+resources/dataset/dataset2.xlsx
