@@ -83,7 +83,12 @@ This README also explains each top-level entry from `config.json`:
 For a more complete walkthrough and examples for each field, see [SETTINGS_GUIDE.md](SETTINGS_GUIDE.md).
 
 ## Usage
-Run the main steps (activate your virtualenv first):
+
+Run the entire pipeline 
+
+Double click the `start.bat` file. It will run the three steps sequentially.
+
+Run the steps individually:
 
 ```powershell
 # Download video segments referenced by the Excel file
@@ -99,7 +104,7 @@ python video_merger.py
 Outputs are written under the `output/` tree (`clips/`, `cards/`, `final_videos/`).
 
 ## Troubleshooting
-- Check `output/failed_urls.csv` for download failures.
+- Check `output/download_report.csv` or `output/merge_report.csv` for download/merge failures.
 - If text is missing or misaligned, adjust coordinates in `card_config` within `config.json` or consult [SETTINGS_GUIDE.md](SETTINGS_GUIDE.md).
 
 ## Contributing
