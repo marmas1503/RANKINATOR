@@ -2,18 +2,18 @@
   "global_settings": {
     "excel_file": "resources/dataset/dataset2.xlsx",
     "font_path": "comic.ttf",
-    "max_workers": 4
+    "max_workers": 3
   },
   "excel_mapping": {
     "rank_col": "A",
     "notes_col": "B",
     "category_col": "C",
-    "timestamp_col": "C",
     "title_col": "D",
     "author_col": "E",
     "origin_col": "F",
-    "url_col": "G",
-    "average_col": "I",
+    "timestamp_col": "G",
+    "url_col": "H",
+    "average_col": "J",
     "voters_map_group1": {},
     "voters_map_group2": {}
   },
