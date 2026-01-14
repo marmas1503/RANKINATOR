@@ -10,8 +10,10 @@
         "11-50": { "total": 40, "split": 0.2 }
     },
     "crossfade_duration": 1.0,
-    "silence_threshold": "-20dB",
-"silence_duration": "0.1",
+    "heatmap_limit": 0.85,
+    "before_highlight_offset": 2.0,
+    "silence_threshold": "-45dB",
+    "silence_duration": "0.1",
     "url_col": "G",
     "rank_col": "A",
     "timestamp_col": "C",
