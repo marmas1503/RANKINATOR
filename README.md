@@ -80,15 +80,13 @@ This README also explains each top-level entry from `config.json`:
 	- `video_size`: size in pixels of the video area (width, height).
 	- `video_zoom`: scaling factor for the video (1.0 = fit exactly).
 
-For a more complete walkthrough and examples for each field, see [SETTINGS_GUIDE.md](SETTINGS_GUIDE.md).
-
 ## Usage
 
-Run the entire pipeline 
+#Run the entire pipeline
 
 Double click the `start.bat` file. It will run the three steps sequentially.
 
-Run the steps individually:
+#Run the steps individually
 
 ```powershell
 # Download video segments referenced by the Excel file
