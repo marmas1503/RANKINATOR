@@ -31,17 +31,27 @@ def worker(task_data):
     try:
         temp_file = os.path.join(d_cfg['temp_dir'], f"temp_{rank}.mp4")
         output_path = os.path.join(d_cfg['output_dir'], f"{rank}_clip.mp4")
+
+        if not url or str(url).lower() == 'nan':
+            return {'Rank': rank, 'Status': 'Skipped: Empty URL', 'Timestamp': 'N/A'}
         
-        # 1. Estrazione info
+        # 1. Estrazione info robusta
         with yt_dlp.YoutubeDL({'quiet': True, 'no_warnings': True}) as ydl:
             info = ydl.extract_info(url, download=False)
-            audio_url = info.get('url') or info['formats'][-1]['url']
+            audio_url = info.get('url')
+            if info.get('acodec') == 'none' or not audio_url:
+                audio_formats = [f for f in info.get('formats', []) if f.get('acodec') != 'none']
+                if audio_formats:
+                    audio_url = audio_formats[-1]['url']
+            
             total_video_duration = info.get('duration', 0)
 
+        # --- DEFINIZIONE VARIABILI MANCANTI ---
         total_dur, split_pct = get_rank_settings(rank, d_cfg)
         manual_seconds = timestamp_to_seconds(manual_ts)
+        # --------------------------------------
 
-        # 2. Logica di instradamento e Log dedicati
+        # 2. Logica di instradamento
         if manual_seconds is not None:
             # --- MODALITÀ MANUALE ---
             start_intro = 0
@@ -52,13 +62,7 @@ def worker(task_data):
                 total_dur, 
                 d_cfg
             )
-            
-            # Log specifico per il manuale
-            log_msg = f"📍 [Rank {rank}] Manual TS: {manual_ts}s | Start: {seconds_to_hms(start_highlight)}"
-            if start_highlight < (manual_seconds - 1) and manual_seconds > 1:
-                log_msg += " (⚠️ Fine video vicina, inizio anticipato)"
-            print(f"\n{log_msg}")
-
+            print(f"\n📍 [Rank {rank}] Manual TS: {manual_ts} | Start: {seconds_to_hms(start_highlight)}")
         else:
             # --- MODALITÀ AUTOMATICA ---
             start_intro = get_start_audio(audio_url, d_cfg)
@@ -72,15 +76,21 @@ def worker(task_data):
             print(f"\n🤖 [Rank {rank}] Auto-Highlight -> Start: {seconds_to_hms(start_highlight)} (Intro skip: {start_intro}s)")
 
         # 3. Esecuzione download e taglio
+        # Calcoliamo dur_a e dur_b qui per chiarezza
+        dur_a = total_dur * split_pct
+        dur_b = total_dur * (1 - split_pct)
+
         download_and_process(url, rank, start_intro, start_highlight, total_dur, 
-                             dur_a := total_dur * split_pct, 
-                             dur_b := total_dur * (1 - split_pct), 
+                             dur_a, dur_b, 
                              d_cfg, temp_file, output_path)
         
         return {'Rank': rank, 'Status': 'OK', 'Timestamp': seconds_to_hms(start_highlight)}
 
     except Exception as e:
         print(f"\n❌ [Rank {rank}] ERRORE: {str(e)}")
+        # Stampa l'errore completo per capire la riga esatta se fallisce ancora
+        import traceback
+        traceback.print_exc()
         return {'Rank': rank, 'Status': f'Error: {str(e)}', 'Timestamp': 'FAILED'}
 
 def main():
