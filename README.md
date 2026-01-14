@@ -33,7 +33,7 @@ iwr https://deno.land/install.ps1 -useb | iex
 ```
 
 ## Configuration
-All runtime settings are in `config.json`. A detailed guide is available at [SETTINGS_GUIDE.md](docs/SETTINGS_GUIDE_EN.md).
+All runtime settings are in `config.json`. A detailed guide is available [here](docs/SETTINGS_GUIDE_EN.md).
 
 This README also explains each top-level entry from `config.json`:
 
@@ -80,10 +80,13 @@ This README also explains each top-level entry from `config.json`:
 	- `video_size`: size in pixels of the video area (width, height).
 	- `video_zoom`: scaling factor for the video (1.0 = fit exactly).
 
-For a more complete walkthrough and examples for each field, see [SETTINGS_GUIDE.md](SETTINGS_GUIDE.md).
-
 ## Usage
-Run the main steps (activate your virtualenv first):
+
+### Run the entire pipeline
+
+Double click the `start.bat` file. It will run the three steps sequentially.
+
+### Run the steps individually
 
 ```powershell
 # Download video segments referenced by the Excel file
@@ -99,11 +102,7 @@ python video_merger.py
 Outputs are written under the `output/` tree (`clips/`, `cards/`, `final_videos/`).
 
 ## Troubleshooting
-- Check `output/failed_urls.csv` for download failures.
-- If text is missing or misaligned, adjust coordinates in `card_config` within `config.json` or consult [SETTINGS_GUIDE.md](SETTINGS_GUIDE.md).
+- Check `output/download_report.csv` or `output/merge_report.csv` for download/merge failures.
+- If text is missing or misaligned, adjust coordinates in `card_config` within `config.json` or consult the [settings guide](docs/SETTINGS_GUIDE_EN.md).
 
-## Contributing
-Submit issues or PRs; keep changes focused and test locally.
 
----
-Generated README — see the settings guide for detailed examples: [SETTINGS_GUIDE.md](SETTINGS_GUIDE.md)
