@@ -106,8 +106,12 @@ def main():
         pool.join()
 
     if results:
-        pd.DataFrame(results).to_csv('report_merge.csv', index=False)
-        print("\n✨ Procedura terminata.")
+        # Ensure top-level output folder exists and save merge report there
+        reports_dir = os.path.dirname(e_cfg.get('output_final_dir', 'output/final_videos')) or 'output'
+        os.makedirs(reports_dir, exist_ok=True)
+        merge_report_path = os.path.join(reports_dir, 'merge_report.csv')
+        pd.DataFrame(results).to_csv(merge_report_path, index=False)
+        print(f"\n✨ Procedura terminata. Report salvato: {merge_report_path}")
 
 if __name__ == "__main__":
     main()

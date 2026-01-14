@@ -130,8 +130,12 @@ def main():
         
         # Report finale ordinato per Rank
         report_df = pd.DataFrame(results).sort_values('Rank')
-        report_df.to_csv('report_download.csv', index=False)
-        print("\n✨ Download completato. Report salvato.")
+        # Ensure top-level output folder exists and save report there
+        reports_dir = os.path.dirname(d_cfg.get('output_dir', 'output/clips')) or 'output'
+        os.makedirs(reports_dir, exist_ok=True)
+        out_report = os.path.join(reports_dir, 'download_report.csv')
+        report_df.to_csv(out_report, index=False)
+        print(f"\n✨ Download completato. Report salvato: {out_report}")
 
     except Exception as e:
         print(f"❌ Errore critico nel Main: {e}")
