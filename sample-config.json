@@ -57,6 +57,7 @@
   },
   "icons_map": {},
   "video_editor_config": {
+    "resize_mode": "letterbox",
     "output_final_dir": "output/final_videos",
     "fps": 30,
     "video_position": [41, 105],
