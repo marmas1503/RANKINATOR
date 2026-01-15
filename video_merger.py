@@ -11,10 +11,10 @@ except ImportError:
     from moviepy.editor import VideoFileClip, ImageClip, CompositeVideoClip
 
 from modules.config_loader import load_config
+from modules.audio_processor import normalize_final_clip
 
 def merge_worker(task_data):
     rank, v_path, c_path, e_cfg = task_data
-    # Log di inizio processo
     sys.stdout.write(f"\n[Rank {rank}] -> Inizio Rendering...\n")
     sys.stdout.flush()
     
@@ -36,7 +36,7 @@ def merge_worker(task_data):
         final_path = os.path.join(e_cfg['output_final_dir'], out_name)
         temp_audio = os.path.join(e_cfg['output_final_dir'], f"temp_audio_{rank}.m4a")
 
-        # Scriviamo il file con un logger minimale per evitare il flickering
+        # 1. Scrittura del video tramite MoviePy
         final_clip.write_videofile(
             final_path, 
             codec="libx264", 
@@ -44,14 +44,22 @@ def merge_worker(task_data):
             fps=e_cfg['fps'],
             temp_audiofile=temp_audio,
             remove_temp=True,
-            logger='bar',      # Usiamo 'bar' ma MoviePy gestirà meglio i flussi separati
+            logger='bar',
             threads=1,
             preset="ultrafast"
         )
         
         video.close()
         final_clip.close()
-        sys.stdout.write(f"\n✅ [Rank {rank}] COMPLETATO: {out_name}\n")
+
+        # 2. NORMALIZZAZIONE AUDIO (Mastering Finale)
+        if e_cfg.get('audio_normalization', {}).get('enabled'):
+            sys.stdout.write(f"🔊 [Rank {rank}] LOG: Normalizzazione audio in corso...\n")
+            sys.stdout.flush()
+            # Passiamo d_cfg o e_cfg (basta che contenga la chiave audio_normalization)
+            normalize_final_clip(final_path, e_cfg)
+
+        sys.stdout.write(f"\n✅ [Rank {rank}] COMPLETATO E LIVELLATO: {out_name}\n")
         sys.stdout.flush()
         return {"Rank": rank, "Status": "OK", "File": out_name}
 

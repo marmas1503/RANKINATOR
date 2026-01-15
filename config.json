@@ -61,6 +61,12 @@
     "fps": 30,
     "video_position": [41, 105],
     "video_size": [1219, 688],
-    "video_zoom": 1.0
+    "video_zoom": 1.0,
+    "audio_normalization": {
+        "enabled": true,
+        "target_i": -14.0,
+        "target_tp": -1.0,
+        "lra": 7.0
+    }
   }
 }

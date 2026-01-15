@@ -17,4 +17,5 @@ output/
 failed_urls.csv
 
 # File Excel (opzionale, se il dataset contiene dati sensibili o è molto pesante)
-resources/*
+resources/dataset/*
+resources/template/*
