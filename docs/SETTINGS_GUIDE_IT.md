@@ -117,6 +117,7 @@ Se un'icona manca, lo script può ignorarla o segnalare un errore a seconda del 
 
 ## 5) `video_editor_config` — inserire il video nella card
 
+- `resize_mode`: come ridimensionare i video per adattarli all'area video ("letterbox" per aggiungere barre nere, "crop" per ritagliare i bordi).
 - `video_position`: `[x, y]` dell'angolo in alto a sinistra dell'area video sulla card.
 - `video_size`: `[width, height]` dimensione esatta dell'area in pixel.
 - `video_zoom`: `1.0` adatta perfettamente; `>1.0` ingrandisce ritagliando i bordi.

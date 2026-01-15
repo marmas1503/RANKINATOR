@@ -76,6 +76,7 @@ This README also explains each top-level entry from `config.json`:
 	- Mapping of category keys to icon filenames inside `resources/icons/`.
 
 - **`video_editor_config`**
+	- `resize_mode`: how to resize videos to fit the video area ("letterbox" to add black bars, "crop" to crop edges).
 	- `output_final_dir`: directory for final merged videos.
 	- `fps`: output frames per second.
 	- `video_position`: top-left pixel where the video is placed on the card background.

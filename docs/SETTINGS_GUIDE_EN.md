@@ -118,6 +118,7 @@ If an icon is missing, the script will either skip it or raise an error dependin
 
 ## 5) `video_editor_config` — merging video and card
 
+- `resize_mode`: how to resize videos to fit the video area ("letterbox" to add black bars, "crop" to crop edges).
 - `video_position`: [x, y] of the top-left corner of the video area on the card.
 - `video_size`: [width, height] exact pixel size to scale the video into.
 - `video_zoom`: 1.0 fits; >1 crops the edges after scaling.
