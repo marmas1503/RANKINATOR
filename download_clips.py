@@ -80,6 +80,18 @@ def worker(task_data):
         dur_a = total_dur * split_pct
         dur_b = total_dur * (1 - split_pct)
 
+        # --- CONTROLLO DI SICUREZZA DURATA ---
+        # Se lo skip dell'intro + la durata della clip superano il video reale
+        if (start_intro + total_dur) > total_video_duration:
+            print(f"⚠️ [Rank {rank}] Clip troppo lunga per il video originale. Riduzione skip intro...")
+            # Opzione A: Riduciamo lo skip per farci stare la clip
+            start_intro = max(0, total_video_duration - total_dur)
+            
+            # Opzione B: Se anche così non ci sta, accorciamo la clip (opzionale)
+            if total_dur > total_video_duration:
+                total_dur = total_video_duration
+                start_intro = 0
+
         download_and_process(url, rank, start_intro, start_highlight, total_dur, 
                              dur_a, dur_b, 
                              d_cfg, temp_file, output_path)

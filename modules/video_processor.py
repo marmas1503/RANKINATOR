@@ -2,6 +2,7 @@ import os
 import yt_dlp
 import ffmpeg
 import time
+import subprocess
 
 def download_and_process(url, rank, start_intro, start_highlight, total_dur, dur_a, dur_b, d_cfg, temp_file, output_path):
     xfade = d_cfg.get('crossfade_duration', 1.0)
@@ -15,23 +16,50 @@ def download_and_process(url, rank, start_intro, start_highlight, total_dur, dur
         print(f"   > Taglio: da {start_intro:.2f}s per una durata di {total_dur}s")
         
         ydl_opts = {
-            'format': fmt, 
-            'outtmpl': output_path, 
+        'format': fmt, 
+        'outtmpl': output_path, 
+        'quiet': True,
+        'external_downloader': 'ffmpeg',
+        'external_downloader_args': {
+            'ffmpeg_i': ['-ss', str(start_intro), '-t', str(total_dur)],
+            'ffmpeg_o': ['-vcodec', 'libx264', '-acodec', 'aac', '-pix_fmt', 'yuv420p', '-crf', '21']
+        }
+    }
+
+    try:
+        with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+            ydl.download([url])
+        
+        # CONTROLLO CRITICO: Il file è valido?
+        if not os.path.exists(output_path) or os.path.getsize(output_path) < 1000:
+            print(f"⚠️ [RANK {rank}] Download diretto fallito (SABR/Empty). Passo al metodo robusto...")
+            raise Exception("File vuoto")
+
+    except Exception:
+        # --- METODO ROBUSTO (DOWNLOAD TEMPORANEO E TAGLIO LOCALE) ---
+        # Scarichiamo il pezzo che ci serve localmente senza filtri complessi di yt-dlp
+        temp_raw = output_path.replace(".mp4", "_raw.mp4")
+        raw_opts = {
+            'format': fmt,
+            'outtmpl': temp_raw,
             'quiet': True,
-            'external_downloader': 'ffmpeg',
-            'external_downloader_args': {
-                'ffmpeg_i': ['-ss', str(start_intro), '-t', str(total_dur)],
-                'ffmpeg_o': ['-vcodec', 'libx264', '-acodec', 'aac', '-pix_fmt', 'yuv420p', '-crf', '21']
-            }
+            # Non usiamo -ss qui per evitare errori SABR, scarichiamo tutto o usiamo il download nativo
         }
         
-        try:
-            with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-                ydl.download([url])
-            print(f"✅ [RANK {rank}] LOG: Clip unica salvata correttamente.")
-        except Exception as e:
-            print(f"⚠️ [RANK {rank}] LOG ERRORE durante il download diretto: {e}")
-            raise
+        with yt_dlp.YoutubeDL(raw_opts) as ydl:
+            ydl.download([url])
+        
+        # Ora tagliamo il file scaricato localmente con FFmpeg (funziona sempre)
+        cmd_cut = [
+            'ffmpeg', '-y', '-i', temp_raw,
+            '-ss', str(start_intro), '-t', str(total_dur),
+            '-vcodec', 'libx264', '-acodec', 'aac', '-pix_fmt', 'yuv420p', '-crf', '21',
+            output_path
+        ]
+        subprocess.run(cmd_cut, capture_output=True)
+        
+        if os.path.exists(temp_raw):
+            os.remove(temp_raw)
     
     # --- CASO 2: CROSSFADE (Download temporaneo + Editing FFmpeg) ---
     else:
