@@ -121,6 +121,11 @@ If an icon is missing, the script will either skip it or raise an error dependin
 - `video_position`: [x, y] of the top-left corner of the video area on the card.
 - `video_size`: [width, height] exact pixel size to scale the video into.
 - `video_zoom`: 1.0 fits; >1 crops the edges after scaling.
+- `audio_normalization`: settings for normalizing audio levels in the final videos.
+  - `enabled`: whether to apply audio normalization (true/false).
+  - `target_i`: integrated loudness target (dB, e.g., -14.0).
+  - `target_tp`: true peak target (dB, e.g., -1.0).
+  - `lra`: loudness range target (dB, e.g., 7.0).
 
 If the video looks cropped incorrectly, try lowering `video_zoom` or adjust `video_size`.
 

@@ -35,6 +35,8 @@ iwr https://deno.land/install.ps1 -useb | iex
 ## Configuration
 All runtime settings are in `config.json`. A detailed guide is available [here](docs/SETTINGS_GUIDE_EN.md).
 
+To get started, copy `sample-config.json` to `config.json` and adjust the settings as needed.
+
 This README also explains each top-level entry from `config.json`:
 
 - **`global_settings`**
@@ -79,6 +81,11 @@ This README also explains each top-level entry from `config.json`:
 	- `video_position`: top-left pixel where the video is placed on the card background.
 	- `video_size`: size in pixels of the video area (width, height).
 	- `video_zoom`: scaling factor for the video (1.0 = fit exactly).
+	- `audio_normalization`: settings for normalizing audio levels in the final videos.
+		- `enabled`: whether to apply audio normalization (true/false).
+		- `target_i`: integrated loudness target (dB, e.g., -14.0).
+		- `target_tp`: true peak target (dB, e.g., -1.0).
+		- `lra`: loudness range target (dB, e.g., 7.0).
 
 ## Usage
 

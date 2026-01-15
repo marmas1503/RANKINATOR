@@ -109,6 +109,7 @@ Associa la chiave della categoria (valore della colonna `category` nell'Excel) a
 ```json
 "icons_map": {}
 ```
+```
 
 Se un'icona manca, lo script può ignorarla o segnalare un errore a seconda del percorso eseguito: verifica eventuali log `output/failed_icons.log`.
 
@@ -119,6 +120,11 @@ Se un'icona manca, lo script può ignorarla o segnalare un errore a seconda del 
 - `video_position`: `[x, y]` dell'angolo in alto a sinistra dell'area video sulla card.
 - `video_size`: `[width, height]` dimensione esatta dell'area in pixel.
 - `video_zoom`: `1.0` adatta perfettamente; `>1.0` ingrandisce ritagliando i bordi.
+- `audio_normalization`: impostazioni per normalizzare i livelli audio nei video finali.
+  - `enabled`: se applicare la normalizzazione audio (true/false).
+  - `target_i`: target di loudness integrata (dB, es. -14.0).
+  - `target_tp`: target di picco vero (dB, es. -1.0).
+  - `lra`: target di range di loudness (dB, es. 7.0).
 
 Se il video appare troppo ritagliato, prova a ridurre `video_zoom` o modificare `video_size`.
 
