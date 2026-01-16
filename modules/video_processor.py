@@ -6,13 +6,14 @@ import subprocess
 
 def download_and_process(url, rank, start_intro, start_highlight, total_dur, dur_a, dur_b, d_cfg, temp_file, output_path):
     xfade = d_cfg.get('crossfade_duration', 1.0)
+    overlap_threshold = d_cfg.get('overlap_threshold', 0) # quanti secondi di distanza minima tra la fine di un segmento e l'inizio dell'altro per attivare il crossfade
     fmt = 'bestvideo[ext=mp4][vcodec^=avc1][height<=1080]+bestaudio[ext=m4a]/best[ext=mp4]/best'
     
     start_time_proc = time.time()
     
     # --- CASO 1: CLIP UNICA (Download diretto senza file temporaneo) ---
-    if (start_intro + dur_a >= start_highlight):
-        print(f"📦 [RANK {rank}] LOG: Modalità CLIP UNICA rilevata.")
+    if (start_intro + dur_a + overlap_threshold >= start_highlight):
+        print(f"📦 [RANK {rank}] LOG: Modalità CLIP UNICA rilevata (Overlap Threshold: {overlap_threshold}s).")
         print(f"   > Taglio: da {start_intro:.2f}s per una durata di {total_dur}s")
         
         ydl_opts = {

@@ -29,6 +29,7 @@
       "11-50": { "total": 40, "split": 0.3 }
     },
     "crossfade_duration": 1.0,
+    "overlap_threshold": 2,
     "heatmap_limit": 0.85,
     "before_highlight_offset": 2.0,
     "silence_threshold": -30,

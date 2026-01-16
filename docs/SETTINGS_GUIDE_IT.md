@@ -68,7 +68,9 @@ ffmpeg -i input.mp4 -af silencedetect=noise=-45dB:d=0.5 -f null -
 
 Il comando stampa gli eventi di silenzio; gli script usano logiche simili per non scegliere segmenti silenziosi.
 
-Esempio di crossfade: quando unisci intro e highlight è utile applicare una piccola dissolvenza incrociata. `crossfade_duration` è in secondi (es. 1.0).
+Crossfade e sovrapposizione:
+- `crossfade_duration`: secondi di crossfade quando unisci intro+highlight (es. 1.0).
+- `overlap_threshold`: gap minimo (secondi) tra la fine dell'intro e l'inizio dell'highlight per abilitare il crossfade. Se il gap <= soglia, scarica un singolo clip continuo invece di due segmenti.
 
 ---
 
@@ -136,7 +138,7 @@ Se il video appare troppo ritagliato, prova a ridurre `video_zoom` o modificare 
 ```json
 {
   "global_settings": { "excel_file": "resources/dataset/dataset2.xlsx", "font_path": "comic.ttf", "max_workers": 3 },
-  "download_config": { "output_dir": "output/clips", "default_duration": 30, "crossfade_duration": 1.0 },
+  "download_config": { "output_dir": "output/clips", "default_duration": 30, "crossfade_duration": 1.0, "overlap_threshold": 0 },
   "card_config": { "base_image": "resources/template/template.png", "output_folder": "output/cards" }
 }
 ```

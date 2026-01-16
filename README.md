@@ -57,6 +57,7 @@ This README also explains each top-level entry from `config.json`:
 	- `default_split_percentage`: fallback split ratio between intro/highlight.
 	- `duration_map`: per-rank ranges controlling `total` seconds and `split` ratio.
 	- `crossfade_duration`: seconds of crossfade when joining intro+highlight.
+	- `overlap_threshold`: minimum gap (seconds) between intro end and highlight start to enable crossfade; if gap <= threshold, downloads a single continuous clip.
 	- `heatmap_limit`: threshold used when selecting highlight region from audio heatmap.
 	- `before_highlight_offset`: seconds to include before detected highlight.
 	- `silence_threshold`: audio threshold for silence detection (e.g. `-45dB`).

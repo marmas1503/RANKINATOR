@@ -70,7 +70,9 @@ ffmpeg -i input.mp4 -af silencedetect=noise=-45dB:d=0.5 -f null -
 
 This prints silence start/end events; the scripts use similar logic to avoid choosing silence-only regions.
 
-Crossfade example: when joining intro+highlight, a small crossfade smooths the seam. The `crossfade_duration` is in seconds (e.g. 1.0).
+Crossfade and overlap:
+- `crossfade_duration`: seconds of crossfade when joining intro+highlight (e.g. 1.0).
+- `overlap_threshold`: minimum gap (seconds) between intro end and highlight start required to enable crossfade. If the gap <= threshold, downloads a single continuous clip instead of two segments.
 
 ---
 
@@ -137,7 +139,7 @@ If the video looks cropped incorrectly, try lowering `video_zoom` or adjust `vid
 ```json
 {
   "global_settings": { "excel_file": "resources/dataset/dataset2.xlsx", "font_path": "comic.ttf", "max_workers": 3 },
-  "download_config": { "output_dir": "output/clips", "default_duration": 30, "crossfade_duration": 1.0 },
+  "download_config": { "output_dir": "output/clips", "default_duration": 30, "crossfade_duration": 1.0, "overlap_threshold": 0 },
   "card_config": { "base_image": "resources/template/template.png", "output_folder": "output/cards" }
 }
 ```
