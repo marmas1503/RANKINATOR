@@ -92,7 +92,7 @@ This README also explains each top-level entry from `config.json`:
 
 ### Run the entire pipeline
 
-Double click the `start.bat` file. It will run the three steps sequentially.
+Double click the `generate_full_videos.bat` file. It will run all steps sequentially: card generation, clip download, video merging, and audio normalization.
 
 ### Run the steps individually
 
@@ -105,12 +105,35 @@ python create_cards.py
 
 # Merge clips into the cards to produce final videos
 python video_merger.py
+
+# (Optional) Normalize audio levels in final videos
+python audio_normalizer.py
 ```
+
+### Batch Scripts
+
+For convenience, batch files are provided to automate multiple steps:
+
+- `generate_full_videos.bat`: Runs `create_cards.py`, `download_clips.py`, `video_merger.py`, and `audio_normalizer.py` on final videos.
+- `generate_normalized_clips.bat`: Runs `create_cards.py`, `download_clips.py`, and `audio_normalizer.py` on downloaded clips.
 
 Outputs are written under the `output/` tree (`clips/`, `cards/`, `final_videos/`).
 
+## Reports
+
+The scripts generate CSV report files in `output/report/` for tracking processing results:
+
+- `download_report.csv`: Logs the status of each clip download, including successes and failures.
+- `card_generation_report.csv`: Records the outcome of generating each card image.
+- `audio_normalization_report.csv`: Details the results of audio normalization on videos or clips.
+
+These reports are useful for identifying and retrying failed operations.
+
 ## Troubleshooting
-- Check `output/download_report.csv` or `output/merge_report.csv` for download/merge failures.
+- Check the CSV report files in `output/report/` for details on failures:
+  - `download_report.csv` for download issues.
+  - `card_generation_report.csv` for card generation problems.
+  - `audio_normalization_report.csv` for audio processing errors.
 - If text is missing or misaligned, adjust coordinates in `card_config` within `config.json` or consult the [settings guide](docs/SETTINGS_GUIDE_EN.md).
 
 

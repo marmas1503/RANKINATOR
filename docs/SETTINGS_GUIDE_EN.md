@@ -166,10 +166,24 @@ ffmpeg -i input.mp4 -vn -ac 1 -ar 22050 output.wav
 
 ---
 
-## 8) Extending behavior
+## 8) Batch Scripts and Reports
 
-- To change how highlights are detected, check `modules/audio_analyzer.py` and adjust thresholds there.
-- To change image generation (fonts, alignment), edit `modules/utils.py` and the drawing functions used by `create_cards.py`.
+### Batch Scripts
+
+Two batch files are provided for convenience to run multiple processing steps automatically:
+
+- `generate_full_videos.bat`: Executes `create_cards.py`, `download_clips.py`, `video_merger.py`, and `audio_normalizer.py` on the final merged videos. Use this for the complete pipeline including audio normalization of outputs.
+- `generate_normalized_clips.bat`: Runs `create_cards.py`, `download_clips.py`, and `audio_normalizer.py` on the downloaded clips. This normalizes audio in the source clips before merging.
+
+### Report Files
+
+All scripts generate CSV reports in `output/report/` to log processing status:
+
+- `download_report.csv`: Records success/failure for each video clip download attempt.
+- `card_generation_report.csv`: Logs the generation status of each card image.
+- `audio_normalization_report.csv`: Details the audio normalization results for videos or clips processed.
+
+Review these files to troubleshoot issues, such as failed downloads or normalization errors.
 
 ---
 
