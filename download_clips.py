@@ -155,7 +155,7 @@ def main():
         # Ensure top-level output folder exists and save report there
         reports_dir = os.path.dirname(d_cfg.get('output_dir', 'output/clips')) or 'output'
         os.makedirs(reports_dir, exist_ok=True)
-        out_report = os.path.join(reports_dir, 'download_report.csv')
+        out_report = os.path.join(reports_dir, 'report/download_report.csv')
         report_df.to_csv(out_report, index=False)
         print(f"\n✨ Download completato. Report salvato: {out_report}")
 

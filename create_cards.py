@@ -7,14 +7,11 @@ import logging
 from openpyxl.utils import column_index_from_string
 from modules.config_loader import load_config
 
-# Configurazione Logging
+# Configurazione Logging (mantenuta per errori critici)
 logging.basicConfig(
     level=logging.INFO,
     format='%(asctime)s - %(levelname)s - %(message)s',
-    handlers=[
-        logging.FileHandler("generation.log"),
-        logging.StreamHandler()
-    ]
+    handlers=[logging.StreamHandler()]
 )
 
 def sanitize_filename(rank, title):
@@ -38,6 +35,7 @@ def get_voters_list(cfg):
 
 def generate_images():
     logging.info("Avvio processo di generazione immagini...")
+    generation_report = [] # Lista per accumulare i dati del report
     
     try:
         cfg = load_config()
@@ -47,6 +45,10 @@ def generate_images():
         ui = c_cfg['voters_ui']
         
         os.makedirs(c_cfg['output_folder'], exist_ok=True)
+        # Creazione cartella report
+        report_dir = "output/report"
+        os.makedirs(report_dir, exist_ok=True)
+        
         df = pd.read_excel(g_cfg['excel_file'])
         voters = get_voters_list(cfg)
         logging.info(f"Excel caricato: {len(df)} righe trovate.")
@@ -55,16 +57,17 @@ def generate_images():
         return
 
     for index, row in df.iterrows():
+        status = "Success"
+        error_msg = ""
+        fname = ""
+        
         try:
             img = Image.open(c_cfg['base_image']).convert("RGBA")
             
-            # Utilizziamo Pilmoji per gestire il rendering delle emoji nel testo
             with Pilmoji(img) as pilmoji_draw:
-                
                 current_cat = str(row.iloc[column_index_from_string(m_cfg['category_col']) - 1]).strip()
                 is_hidden = current_cat in c_cfg['hidden_categories']
 
-                # Campi Dinamici
                 fields_to_draw = [
                     (m_cfg['rank_col'], [140, 843], 66, "Rank"),
                     (m_cfg['average_col'], [196, 961], 32, "Average"),
@@ -136,12 +139,28 @@ def generate_images():
             
             output_path = os.path.join(c_cfg['output_folder'], f"{fname}.png")
             img.save(output_path)
-            logging.info(f"Card generata con successo: {fname}.png")
+            logging.info(f"Card generata: {fname}.png")
 
         except Exception as e:
-            logging.error(f"Errore nella generazione della riga {index}: {e}")
+            status = "Error"
+            error_msg = str(e)
+            logging.error(f"Errore riga {index}: {e}")
 
-    logging.info("Processo completato.")
+        # Aggiunta dati al report
+        generation_report.append({
+            'Rank': row.iloc[column_index_from_string(m_cfg['rank_col'])-1],
+            'Title': row.iloc[column_index_from_string(m_cfg['title_col'])-1],
+            'Filename': f"{fname}.png" if status == "Success" else "",
+            'Status': status,
+            'Error': error_msg
+        })
+
+    # Salvataggio Report finale in CSV
+    if generation_report:
+        report_df = pd.DataFrame(generation_report)
+        report_path = os.path.join("output/report", "card_generation_report.csv")
+        report_df.to_csv(report_path, index=False)
+        logging.info(f"✨ Processo completato. Report salvato in: {report_path}")
 
 if __name__ == "__main__":
     generate_images()

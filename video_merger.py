@@ -129,7 +129,7 @@ def main():
     if results:
         reports_dir = os.path.dirname(e_cfg.get('output_final_dir', 'output/final_videos')) or 'output'
         os.makedirs(reports_dir, exist_ok=True)
-        pd.DataFrame(results).to_csv(os.path.join(reports_dir, 'merge_report.csv'), index=False)
+        pd.DataFrame(results).to_csv(os.path.join(reports_dir, 'report/merge_report.csv'), index=False)
         print(f"\n✨ Rendering terminato. Ricordati di avviare lo script di normalizzazione audio separato.")
 
 if __name__ == "__main__":
